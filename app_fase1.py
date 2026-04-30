@@ -265,30 +265,70 @@ def render_schedule(df):
     html += '</tbody></table></div>'
     st.markdown(html, unsafe_allow_html=True)
 
+def tiempo_a_segundos(t: str) -> int:
+    """Convierte MM:SS o HH:MM:SS a segundos. Retorna 999999 si no parsea."""
+    try:
+        partes = str(t).strip().split(":")
+        partes = [int(p) for p in partes]
+        if len(partes) == 2:   return partes[0]*60 + partes[1]
+        if len(partes) == 3:   return partes[0]*3600 + partes[1]*60 + partes[2]
+    except:
+        pass
+    return 999999
+
 def render_ranking(df):
     df_fin = df[df["estado"]=="FINALIZADO"].copy()
     if df_fin.empty:
         st.markdown('<div class="fv-empty">El ranking aparece cuando finalicen los primeros heats.</div>', unsafe_allow_html=True)
         return
-    df_fin["puntos"] = pd.to_numeric(df_fin["puntos"], errors="coerce").fillna(0)
-    ranking = df_fin.groupby(["equipo","categoria"])["puntos"].sum().reset_index()
-    ranking = ranking.sort_values("puntos", ascending=False).reset_index(drop=True)
 
-    pos_cls = {0:"p1",1:"p2",2:"p3"}
-    pos_icon= {0:"🥇",1:"🥈",2:"🥉"}
+    tipo = df_fin["tipo_puntaje"].astype(str).str.strip().str.upper().mode()
+    es_tiempo = len(tipo) > 0 and tipo[0] == "TIEMPO"
 
-    html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'
-    for i, r in ranking.iterrows():
-        pc   = pos_cls.get(i,"")
-        icon = pos_icon.get(i, str(i+1))
-        html += (
-            f'<tr class="rk-row">'
-            f'<td><span class="rk-pos {pc}">{icon}</span></td>'
-            f'<td><span class="rk-team">{r["equipo"]}</span></td>'
-            f'<td>{cat_chip(r["categoria"])}</td>'
-            f'<td><div class="rk-pts">{int(r["puntos"])}</div><div class="rk-pts-label">pts</div></td>'
-            f'</tr>'
-        )
+    pos_cls  = {0:"p1", 1:"p2", 2:"p3"}
+    pos_icon = {0:"🥇", 1:"🥈", 2:"🥉"}
+
+    if es_tiempo:
+        # Ranking por tiempo — menor tiempo gana
+        df_fin["_seg"] = df_fin["resultado"].apply(tiempo_a_segundos)
+        ranking = df_fin[df_fin["_seg"] < 999999].groupby(["equipo","categoria"])["_seg"].min().reset_index()
+        ranking = ranking.sort_values("_seg", ascending=True).reset_index(drop=True)
+
+        html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Tiempo</th></tr></thead><tbody>'
+        for i, r in ranking.iterrows():
+            pc   = pos_cls.get(i, "")
+            icon = pos_icon.get(i, str(i+1))
+            seg  = int(r["_seg"])
+            mins = seg // 60
+            secs = seg % 60
+            tiempo_fmt = f"{mins}:{secs:02d}"
+            html += (
+                f'<tr class="rk-row">'
+                f'<td><span class="rk-pos {pc}">{icon}</span></td>'
+                f'<td><span class="rk-team">{r["equipo"]}</span></td>'
+                f'<td>{cat_chip(r["categoria"])}</td>'
+                f'<td><div class="rk-pts">{tiempo_fmt}</div><div class="rk-pts-label">tiempo</div></td>'
+                f'</tr>'
+            )
+    else:
+        # Ranking por puntos — mayor puntaje gana
+        df_fin["puntos"] = pd.to_numeric(df_fin["puntos"], errors="coerce").fillna(0)
+        ranking = df_fin.groupby(["equipo","categoria"])["puntos"].sum().reset_index()
+        ranking = ranking.sort_values("puntos", ascending=False).reset_index(drop=True)
+
+        html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'
+        for i, r in ranking.iterrows():
+            pc   = pos_cls.get(i, "")
+            icon = pos_icon.get(i, str(i+1))
+            html += (
+                f'<tr class="rk-row">'
+                f'<td><span class="rk-pos {pc}">{icon}</span></td>'
+                f'<td><span class="rk-team">{r["equipo"]}</span></td>'
+                f'<td>{cat_chip(r["categoria"])}</td>'
+                f'<td><div class="rk-pts">{int(r["puntos"])}</div><div class="rk-pts-label">pts</div></td>'
+                f'</tr>'
+            )
+
     html += '</tbody></table>'
     st.markdown(html, unsafe_allow_html=True)
 
