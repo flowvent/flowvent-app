@@ -156,6 +156,8 @@ def load_data() -> pd.DataFrame:
     df = df.dropna(subset=["event_id","equipo","estado"])
     df["estado"]    = df["estado"].astype(str).str.strip().str.upper()
     df["categoria"] = df["categoria"].astype(str).str.strip().str.upper()
+    df["activo"]    = df["activo"].astype(str).str.strip().str.upper() if "activo" in df.columns else "SI"
+    df = df[df["activo"] == "SI"]
     df = df[df["estado"].isin({"EN_CURSO","FINALIZADO","PROXIMO"})]
     orden_estado = {"EN_CURSO":0,"PROXIMO":1,"FINALIZADO":2}
     df["_orden_estado"] = df["estado"].map(orden_estado)
