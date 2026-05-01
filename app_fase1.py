@@ -182,10 +182,16 @@ def parse_hora(val):
 def tiempo_a_segundos(t):
     try:
         p = [int(x) for x in str(t).strip().split(":")]
-        if len(p)==2: return p[0]*60+p[1]
-        if len(p)==3: return p[0]*3600+p[1]*60+p[2]
+        if len(p)==2: return p[0]*60+p[1]          # MM:SS
+        if len(p)==3: return p[0]*3600+p[1]*60+p[2] # HH:MM:SS
     except: pass
     return 999999
+
+def segundos_a_str(s):
+    s = int(s)
+    mins = s // 60
+    secs = s % 60
+    return f"{mins}:{secs:02d}"
 
 def cat_chip(cat):
     cat = str(cat).strip().upper()
@@ -275,8 +281,8 @@ def render_ranking(df):
         rk = rk.sort_values("_seg").reset_index(drop=True)
         html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Tiempo</th></tr></thead><tbody>'
         for i,r in rk.iterrows():
-            s=int(r["_seg"]); m=s//60; ss=s%60
-            html += f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td><td><span class="rk-team">{r["equipo"]}</span></td><td>{cat_chip(r["categoria"])}</td><td><div class="rk-pts">{m}:{ss:02d}</div><div class="rk-pts-label">tiempo</div></td></tr>'
+            s=int(r["_seg"])
+            html += f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td><td><span class="rk-team">{r["equipo"]}</span></td><td>{cat_chip(r["categoria"])}</td><td><div class="rk-pts">{segundos_a_str(s)}</div><div class="rk-pts-label">tiempo</div></td></tr>'
     else:
         rk = df_fin.groupby(["equipo","categoria"])["puntos"].sum().reset_index()
         rk = rk.sort_values("puntos", ascending=False).reset_index(drop=True)
