@@ -1,8 +1,6 @@
 # ============================================================
-#  FLOWVENT — Versión 5.1
-#  + Pantalla de selección de eventos (botones nativos)
-#  + Ranking dual (tiempo / puntos)
-#  + notranslate
+#  FLOWVENT — Versión 5.2
+#  + Mensajes en vivo (INFO / ALERTA / GANADOR)
 # ============================================================
 
 import streamlit as st
@@ -11,12 +9,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from streamlit_autorefresh import st_autorefresh
 
-st.set_page_config(
-    page_title="Flowvent | Live",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="Flowvent | Live", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <meta name="google" content="notranslate">
@@ -30,6 +23,8 @@ st.markdown("""
   [data-testid="stMetric"] { background:#11111C; border:0.5px solid #1E1E35; border-radius:10px; padding:14px 18px; }
   [data-testid="stMetricLabel"] { font-size:0.7rem !important; letter-spacing:.1em; text-transform:uppercase; color:#555 !important; }
   [data-testid="stMetricValue"] { font-family:'Barlow Condensed',sans-serif !important; font-size:2.2rem !important; font-weight:700 !important; color:#fff !important; }
+  div.stButton > button { background:#00E676 !important; color:#000 !important; font-weight:700 !important; border:none !important; border-radius:8px !important; padding:8px 20px !important; font-size:.8rem !important; letter-spacing:.06em !important; text-transform:uppercase !important; }
+  div.stButton > button:hover { background:#00c95e !important; }
   .fv-header { display:flex; align-items:center; justify-content:space-between; padding:1.4rem 0 1.2rem; border-bottom:1px solid #1a1a2e; margin-bottom:1.4rem; }
   .fv-logo-flow { font-family:'Barlow Condensed',sans-serif; font-size:2.6rem; font-weight:900; color:#FFF; text-transform:uppercase; line-height:1; }
   .fv-logo-vent { font-family:'Barlow Condensed',sans-serif; font-size:2.6rem; font-weight:900; color:#00E676; text-transform:uppercase; line-height:1; }
@@ -38,6 +33,7 @@ st.markdown("""
   .fv-live-badge { display:flex; align-items:center; gap:8px; background:rgba(0,230,118,.08); border:1px solid rgba(0,230,118,.2); border-radius:20px; padding:6px 16px; font-size:0.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#00E676; }
   .fv-live-dot  { width:7px; height:7px; background:#00E676; border-radius:50%; animation:pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(1.4)} }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   .ev-card { background:#0E0E1A; border:1px solid #1E1E35; border-top:3px solid #00E676; border-radius:14px; padding:20px; margin-bottom:4px; animation:fadeInUp .3s ease both; }
   .ev-nombre { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:800; color:#FFF; text-transform:uppercase; margin:0 0 6px; }
   .ev-desc { font-size:.8rem; color:#666; margin:0 0 12px; line-height:1.5; }
@@ -60,7 +56,6 @@ st.markdown("""
   .sec-next .fv-section-text{color:#FFB300} .sec-next .fv-section-line{background:linear-gradient(90deg,#FFB300,transparent)}
   .sec-done .fv-section-text{color:#555}    .sec-done .fv-section-line{background:linear-gradient(90deg,#333,transparent)}
   .fv-card { background:#0E0E1A; border-radius:14px; overflow:hidden; border:1px solid #1E1E35; transition:transform .18s ease; animation:fadeInUp .35s ease both; margin-bottom:4px; }
-  @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   .fv-card:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,.6); }
   .card-live { border-top:3px solid #00E676; box-shadow:0 0 28px rgba(0,230,118,.1); }
   .card-next { border-top:3px solid #FFB300; }
@@ -113,8 +108,6 @@ st.markdown("""
   .rk-pts  { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; color:#00E676; text-align:right; }
   .rk-pts-label { font-size:.65rem; color:#444; text-align:right; letter-spacing:.08em; text-transform:uppercase; }
   .fv-footer { text-align:center; padding:2rem 0 0; font-size:.65rem; color:#2a2a3a; letter-spacing:.08em; text-transform:uppercase; }
-  div.stButton > button { background:#00E676 !important; color:#000 !important; font-weight:700 !important; border:none !important; border-radius:8px !important; padding:8px 20px !important; font-size:.8rem !important; letter-spacing:.06em !important; text-transform:uppercase !important; }
-  div.stButton > button:hover { background:#00c95e !important; color:#000 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -187,33 +180,15 @@ def load_mensajes():
         df["activo"] = df["activo"].astype(str).str.strip().str.upper()
         df["tipo"]   = df["tipo"].astype(str).str.strip().str.upper()
         return df[df["activo"]=="SI"].reset_index(drop=True)
-    except: return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
-def render_mensajes():
-    df = load_mensajes()
-    if df.empty: return
-    color_map = {
-        "INFO":    ("rgba(0,230,118,.12)",   "#00E676", "rgba(0,230,118,.3)",   "ℹ️"),
-        "ALERTA":  ("rgba(255,179,0,.12)",   "#FFB300", "rgba(255,179,0,.3)",   "⚠️"),
-        "GANADOR": ("rgba(255,215,0,.12)",   "#FFD700", "rgba(255,215,0,.3)",   "🏆"),
-    }
-    for _, row in df.iterrows():
-        tipo = str(row.get("tipo","INFO")).strip().upper()
-        texto = str(row.get("texto","")).strip()
-        bg, color, border, icon = color_map.get(tipo, color_map["INFO"])
-        st.markdown(
-            f'<div style="background:{bg};border:1px solid {border};border-left:4px solid {color};'
-            f'border-radius:10px;padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:12px;animation:fadeInUp .3s ease both">'
-            f'<span style="font-size:1.2rem">{icon}</span>'
-            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:1.15rem;font-weight:700;'
-            f'color:{color};text-transform:uppercase;letter-spacing:.04em">{texto}</span>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+def parse_hora(val):
     try:
         f = float(val); mins = round(f*24*60)
         return f"{mins//60:02d}:{mins%60:02d}"
-    except: return str(val).strip()
+    except:
+        return str(val).strip()
 
 def tiempo_a_segundos(t):
     try:
@@ -221,18 +196,18 @@ def tiempo_a_segundos(t):
         ms = 0
         if "." in t:
             t, ms_str = t.split(".", 1)
-            ms = int(ms_str.ljust(3, "0")[:3])
+            ms = int(ms_str.ljust(3,"0")[:3])
         p = [int(x) for x in t.split(":")]
-        if len(p)==2: total_ms = (p[0]*60 + p[1]) * 1000 + ms   # MM:SS.mmm
-        elif len(p)==3: total_ms = (p[0]*3600 + p[1]*60 + p[2]) * 1000 + ms
-        else: return 999999999
-        return total_ms
-    except: return 999999999
+        if len(p)==2:  return (p[0]*60 + p[1]) * 1000 + ms
+        if len(p)==3:  return (p[0]*3600 + p[1]*60 + p[2]) * 1000 + ms
+    except:
+        pass
+    return 999999999
 
 def segundos_a_str(ms):
     ms = int(ms)
-    mins = ms // 60000
-    secs = (ms % 60000) // 1000
+    mins   = ms // 60000
+    secs   = (ms % 60000) // 1000
     millis = ms % 1000
     return f"{mins}:{secs:02d}.{millis:03d}"
 
@@ -245,6 +220,29 @@ def cat_chip(cat):
            "DUPLAS-MIXTAS":"cat-DUPLAS-MIXTAS"}.get(key,"cat-DEFAULT")
     return f'<span class="cat-chip {cls}">{cat or "—"}</span>'
 
+def render_mensajes():
+    df_msg = load_mensajes()
+    if df_msg.empty: return
+    color_map = {
+        "INFO":    ("rgba(0,230,118,.12)",  "#00E676", "rgba(0,230,118,.3)",  "ℹ️"),
+        "ALERTA":  ("rgba(255,179,0,.12)",  "#FFB300", "rgba(255,179,0,.3)",  "⚠️"),
+        "GANADOR": ("rgba(255,215,0,.12)",  "#FFD700", "rgba(255,215,0,.3)",  "🏆"),
+    }
+    for _, msg in df_msg.iterrows():
+        tipo  = str(msg.get("tipo","INFO")).strip().upper()
+        texto = str(msg.get("texto","")).strip()
+        bg, color, border, icon = color_map.get(tipo, color_map["INFO"])
+        st.markdown(
+            f'<div style="background:{bg};border:1px solid {border};border-left:4px solid {color};'
+            f'border-radius:10px;padding:14px 20px;margin-bottom:12px;'
+            f'display:flex;align-items:center;gap:12px;animation:fadeInUp .3s ease both">'
+            f'<span style="font-size:1.2rem">{icon}</span>'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:1.15rem;'
+            f'font-weight:700;color:{color};text-transform:uppercase;letter-spacing:.04em">{texto}</span>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
 def render_card(row):
     estado = row["estado"]
     cc = {"EN_CURSO":"card-live","FINALIZADO":"card-done","PROXIMO":"card-next"}.get(estado,"")
@@ -253,8 +251,8 @@ def render_card(row):
     hora = parse_hora(row.get("hora_inicio",""))
     hf = f'<div class="fv-field"><span class="fv-label">Hora</span><span class="fv-value">{hora}</span></div>' if hora else ""
     res = str(row.get("resultado","")).strip()
-    rc = "res-live" if estado=="EN_CURSO" else "res-done"
-    rf = f'<div class="fv-field"><span class="fv-label">Resultado</span><span class="fv-value {rc}">{res}</span></div>' if res else ""
+    rc  = "res-live" if estado=="EN_CURSO" else "res-done"
+    rf  = f'<div class="fv-field"><span class="fv-label">Resultado</span><span class="fv-value {rc}">{res}</span></div>' if res else ""
     try: hv = f"# {int(float(str(row.get('heat',''))))}"
     except: hv = f"# {row.get('heat','—')}"
     return (
@@ -302,9 +300,10 @@ def render_schedule(df):
                     try: hn = int(float(str(r.get("heat",""))))
                     except: hn = r.get("heat","")
                     cells += (f'<div class="sb-cell {sc}"><div class="sb-team">{r["equipo"]}</div>'
-                               f'<div class="sb-wod">{r["wod_nombre"]}</div><div class="sb-heat">Heat #{hn}</div>'
-                               f'<div style="margin-top:4px">{cat_chip(r.get("categoria",""))}</div>'
-                               f'<span class="sb-estado {sc}">{st2}</span></div>')
+                              f'<div class="sb-wod">{r["wod_nombre"]}</div>'
+                              f'<div class="sb-heat">Heat #{hn}</div>'
+                              f'<div style="margin-top:4px">{cat_chip(r.get("categoria",""))}</div>'
+                              f'<span class="sb-estado {sc}">{st2}</span></div>')
                 html += f'<td>{cells}</td>'
         html += '</tr>'
     html += '</tbody></table></div>'
@@ -320,18 +319,23 @@ def render_ranking(df):
     pc = {0:"p1",1:"p2",2:"p3"}; pi = {0:"🥇",1:"🥈",2:"🥉"}
     if es_tiempo:
         df_fin["_seg"] = df_fin["resultado"].apply(tiempo_a_segundos)
-        rk = df_fin[df_fin["_seg"]<999999].groupby(["equipo","categoria"])["_seg"].min().reset_index()
+        rk = df_fin[df_fin["_seg"]<999999999].groupby(["equipo","categoria"])["_seg"].min().reset_index()
         rk = rk.sort_values("_seg").reset_index(drop=True)
         html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Tiempo</th></tr></thead><tbody>'
         for i,r in rk.iterrows():
-            s=int(r["_seg"])
-            html += f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td><td><span class="rk-team">{r["equipo"]}</span></td><td>{cat_chip(r["categoria"])}</td><td><div class="rk-pts">{segundos_a_str(s)}</div><div class="rk-pts-label">tiempo</div></td></tr>'
+            html += (f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td>'
+                     f'<td><span class="rk-team">{r["equipo"]}</span></td>'
+                     f'<td>{cat_chip(r["categoria"])}</td>'
+                     f'<td><div class="rk-pts">{segundos_a_str(r["_seg"])}</div><div class="rk-pts-label">tiempo</div></td></tr>')
     else:
         rk = df_fin.groupby(["equipo","categoria"])["puntos"].sum().reset_index()
         rk = rk.sort_values("puntos", ascending=False).reset_index(drop=True)
         html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Puntos</th></tr></thead><tbody>'
         for i,r in rk.iterrows():
-            html += f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td><td><span class="rk-team">{r["equipo"]}</span></td><td>{cat_chip(r["categoria"])}</td><td><div class="rk-pts">{int(r["puntos"])}</div><div class="rk-pts-label">pts</div></td></tr>'
+            html += (f'<tr class="rk-row"><td><span class="rk-pos {pc.get(i,"")}">{pi.get(i,str(i+1))}</span></td>'
+                     f'<td><span class="rk-team">{r["equipo"]}</span></td>'
+                     f'<td>{cat_chip(r["categoria"])}</td>'
+                     f'<td><div class="rk-pts">{int(r["puntos"])}</div><div class="rk-pts-label">pts</div></td></tr>')
     html += '</tbody></table>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -373,7 +377,7 @@ def main():
                     f'<div class="ev-meta"><span class="ev-meta-item">📅 {fecha}</span>&nbsp;&nbsp;<span class="ev-meta-item">📍 {lugar}</span></div>'
                     f'<div style="margin-top:12px"><span class="ev-badge">⚡ En vivo</span></div>'
                     f'</div>', unsafe_allow_html=True)
-                if st.button(f"Ingresar →", key=f"ev_{i}", use_container_width=True):
+                if st.button("Ingresar →", key=f"ev_{i}", use_container_width=True):
                     st.query_params["evento"] = nombre
                     st.rerun()
         return
@@ -404,8 +408,8 @@ def main():
         cat_sel   = fc.selectbox("Categoría", cat_opts,  label_visibility="collapsed")
         arena_sel = fa.selectbox("Arena",     arena_opts, label_visibility="collapsed")
         dv = df.copy()
-        if cat_sel!="Todas las categorías":  dv = dv[dv["categoria"]==cat_sel]
-        if arena_sel!="Todas las arenas":    dv = dv[dv["arena"]==arena_sel]
+        if cat_sel!="Todas las categorías": dv = dv[dv["categoria"]==cat_sel]
+        if arena_sel!="Todas las arenas":   dv = dv[dv["arena"]==arena_sel]
         dl,dn,dd = dv[dv["estado"]=="EN_CURSO"], dv[dv["estado"]=="PROXIMO"], dv[dv["estado"]=="FINALIZADO"]
         c1,c2,c3,c4 = st.columns(4)
         c1.metric("Total Heats",len(dv)); c2.metric("⚡ En Curso",len(dl))
