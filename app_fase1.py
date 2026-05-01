@@ -173,7 +173,43 @@ def load_data(evento_nombre: str):
     df = df.sort_values(["_orden_estado","orden_display","hora_inicio"]).reset_index(drop=True)
     return df
 
-def parse_hora(val):
+@st.cache_data(ttl=15)
+def load_mensajes():
+    try:
+        client, url = get_client()
+        sh = client.open_by_url(url)
+        ws = sh.worksheet("mensajes")
+        data = ws.get_all_records()
+        if not data: return pd.DataFrame()
+        df = pd.DataFrame(data)
+        for c in ["mensaje_id","texto","tipo","activo","duracion_min"]:
+            if c not in df.columns: df[c] = ""
+        df["activo"] = df["activo"].astype(str).str.strip().str.upper()
+        df["tipo"]   = df["tipo"].astype(str).str.strip().str.upper()
+        return df[df["activo"]=="SI"].reset_index(drop=True)
+    except: return pd.DataFrame()
+
+def render_mensajes():
+    df = load_mensajes()
+    if df.empty: return
+    color_map = {
+        "INFO":    ("rgba(0,230,118,.12)",   "#00E676", "rgba(0,230,118,.3)",   "ℹ️"),
+        "ALERTA":  ("rgba(255,179,0,.12)",   "#FFB300", "rgba(255,179,0,.3)",   "⚠️"),
+        "GANADOR": ("rgba(255,215,0,.12)",   "#FFD700", "rgba(255,215,0,.3)",   "🏆"),
+    }
+    for _, row in df.iterrows():
+        tipo = str(row.get("tipo","INFO")).strip().upper()
+        texto = str(row.get("texto","")).strip()
+        bg, color, border, icon = color_map.get(tipo, color_map["INFO"])
+        st.markdown(
+            f'<div style="background:{bg};border:1px solid {border};border-left:4px solid {color};'
+            f'border-radius:10px;padding:14px 20px;margin-bottom:12px;display:flex;align-items:center;gap:12px;animation:fadeInUp .3s ease both">'
+            f'<span style="font-size:1.2rem">{icon}</span>'
+            f'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:1.15rem;font-weight:700;'
+            f'color:{color};text-transform:uppercase;letter-spacing:.04em">{texto}</span>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
     try:
         f = float(val); mins = round(f*24*60)
         return f"{mins//60:02d}:{mins%60:02d}"
@@ -353,6 +389,8 @@ def main():
         st.warning(f"Sin datos activos para '{evento_sel}'."); return
 
     st.markdown(f'<div style="margin-bottom:1rem"><span class="ev-event-name">⚡ {evento_sel}</span></div>', unsafe_allow_html=True)
+
+    render_mensajes()
 
     vista = st.radio("Vista", ["⚡  En Vivo","📋  Programa","🏆  Ranking"], horizontal=True, label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
