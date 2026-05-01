@@ -34,12 +34,13 @@ st.markdown("""
   .fv-live-dot  { width:7px; height:7px; background:#00E676; border-radius:50%; animation:pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(1.4)} }
   @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  .ev-card { background:#0E0E1A; border:1px solid #1E1E35; border-top:3px solid #00E676; border-radius:14px; padding:20px; margin-bottom:4px; animation:fadeInUp .3s ease both; }
-  .ev-nombre { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:800; color:#FFF; text-transform:uppercase; margin:0 0 6px; }
-  .ev-desc { font-size:.8rem; color:#666; margin:0 0 12px; line-height:1.5; }
-  .ev-meta { display:flex; gap:10px; flex-wrap:wrap; }
-  .ev-meta-item { font-size:.7rem; color:#555; }
-  .ev-badge { display:inline-block; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 10px; border-radius:20px; background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
+  .ev-card { background:#0E0E1A; border:1px solid #1E1E35; border-top:4px solid #00E676; border-radius:18px; padding:32px 28px; margin-bottom:4px; animation:fadeInUp .3s ease both; transition:transform .18s ease, box-shadow .18s ease; }
+  .ev-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,230,118,.12); }
+  .ev-nombre { font-family:'Barlow Condensed',sans-serif; font-size:2.2rem; font-weight:900; color:#FFF; text-transform:uppercase; margin:0 0 10px; letter-spacing:.03em; line-height:1.1; }
+  .ev-desc { font-size:.95rem; color:#666; margin:0 0 16px; line-height:1.6; }
+  .ev-meta { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:4px; }
+  .ev-meta-item { font-size:.82rem; color:#555; }
+  .ev-badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:5px 14px; border-radius:20px; background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
   .ev-event-name { font-family:'Barlow Condensed',sans-serif; font-size:1.1rem; font-weight:700; color:#00E676; text-transform:uppercase; letter-spacing:.06em; }
   .cat-chip { display:inline-block; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
   .cat-RX      { background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
@@ -362,8 +363,8 @@ def main():
         if len(df_eventos)==1:
             st.query_params["evento"] = df_eventos.iloc[0]["nombre"]
             st.rerun()
-        st.markdown('<div class="fv-section sec-live"><span class="fv-section-text">Eventos activos</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
-        cols = st.columns(min(len(df_eventos),3))
+        st.markdown('<div class="fv-section sec-live"><span class="fv-section-text" style="font-size:1.3rem">Eventos activos</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
+        cols = st.columns(min(len(df_eventos),2))
         for i,(_,ev) in enumerate(df_eventos.iterrows()):
             nombre = str(ev.get("nombre","")).strip()
             desc   = str(ev.get("descripcion","")).strip()
