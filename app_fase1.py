@@ -181,17 +181,24 @@ def parse_hora(val):
 
 def tiempo_a_segundos(t):
     try:
-        p = [int(x) for x in str(t).strip().split(":")]
-        if len(p)==2: return p[0]*60+p[1]          # MM:SS
-        if len(p)==3: return p[0]*3600+p[1]*60+p[2] # HH:MM:SS
-    except: pass
-    return 999999
+        t = str(t).strip()
+        ms = 0
+        if "." in t:
+            t, ms_str = t.split(".", 1)
+            ms = int(ms_str.ljust(3, "0")[:3])
+        p = [int(x) for x in t.split(":")]
+        if len(p)==2: total_ms = (p[0]*60 + p[1]) * 1000 + ms   # MM:SS.mmm
+        elif len(p)==3: total_ms = (p[0]*3600 + p[1]*60 + p[2]) * 1000 + ms
+        else: return 999999999
+        return total_ms
+    except: return 999999999
 
-def segundos_a_str(s):
-    s = int(s)
-    mins = s // 60
-    secs = s % 60
-    return f"{mins}:{secs:02d}"
+def segundos_a_str(ms):
+    ms = int(ms)
+    mins = ms // 60000
+    secs = (ms % 60000) // 1000
+    millis = ms % 1000
+    return f"{mins}:{secs:02d}.{millis:03d}"
 
 def cat_chip(cat):
     cat = str(cat).strip().upper()
@@ -277,7 +284,6 @@ def render_ranking(df):
     pc = {0:"p1",1:"p2",2:"p3"}; pi = {0:"🥇",1:"🥈",2:"🥉"}
     if es_tiempo:
         df_fin["_seg"] = df_fin["resultado"].apply(tiempo_a_segundos)
-        st.write(df_fin[["equipo","resultado","_seg"]].head(10))
         rk = df_fin[df_fin["_seg"]<999999].groupby(["equipo","categoria"])["_seg"].min().reset_index()
         rk = rk.sort_values("_seg").reset_index(drop=True)
         html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Tiempo</th></tr></thead><tbody>'
