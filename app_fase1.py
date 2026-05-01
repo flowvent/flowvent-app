@@ -22,6 +22,8 @@ st.set_page_config(
 #  CSS
 # ────────────────────────────────────────────────────────────
 st.markdown("""
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="es">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap');
 
@@ -376,25 +378,25 @@ def pantalla_eventos(df_eventos):
         '<div class="fv-section sec-live"><span class="fv-section-text">Eventos activos</span><div class="fv-section-line"></div></div>',
         unsafe_allow_html=True
     )
-    html = '<div class="ev-grid">'
-    for _, ev in df_eventos.iterrows():
+    cols = st.columns(min(len(df_eventos), 3))
+    for i, (_, ev) in enumerate(df_eventos.iterrows()):
         nombre = str(ev.get("nombre","")).strip()
         desc   = str(ev.get("descripcion","")).strip()
         fecha  = str(ev.get("fecha","")).strip()
         lugar  = str(ev.get("lugar","")).strip()
-        html += (
-            f'<div class="ev-card" onclick="window.location.href=\'?evento={nombre}\'">'
-            f'<p class="ev-nombre">{nombre}</p>'
-            f'<p class="ev-desc">{desc}</p>'
-            f'<div class="ev-meta">'
-            f'<span class="ev-meta-item">📅 {fecha}</span>'
-            f'<span class="ev-meta-item">📍 {lugar}</span>'
-            f'</div>'
-            f'<div style="margin-top:12px"><span class="ev-badge">⚡ En vivo</span></div>'
-            f'</div>'
-        )
-    html += '</div>'
-    st.markdown(html, unsafe_allow_html=True)
+        with cols[i % 3]:
+            st.markdown(
+                f'<div class="ev-card">'
+                f'<p class="ev-nombre">{nombre}</p>'
+                f'<p class="ev-desc">{desc}</p>'
+                f'<div class="ev-meta"><span class="ev-meta-item">📅 {fecha}</span><span class="ev-meta-item">📍 {lugar}</span></div>'
+                f'<div style="margin-top:12px"><span class="ev-badge">⚡ En vivo</span></div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            if st.button(f"Ingresar → {nombre}", key=f"ev_{i}", use_container_width=True):
+                st.query_params["evento"] = nombre
+                st.rerun()
 
 # ────────────────────────────────────────────────────────────
 #  MAIN
