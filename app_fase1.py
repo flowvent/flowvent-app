@@ -277,6 +277,7 @@ def render_ranking(df):
     pc = {0:"p1",1:"p2",2:"p3"}; pi = {0:"🥇",1:"🥈",2:"🥉"}
     if es_tiempo:
         df_fin["_seg"] = df_fin["resultado"].apply(tiempo_a_segundos)
+        st.write(df_fin[["equipo","resultado","_seg"]].head(10))
         rk = df_fin[df_fin["_seg"]<999999].groupby(["equipo","categoria"])["_seg"].min().reset_index()
         rk = rk.sort_values("_seg").reset_index(drop=True)
         html = '<table class="rk-table"><thead><tr><th>Pos</th><th>Equipo</th><th>Categoría</th><th style="text-align:right">Tiempo</th></tr></thead><tbody>'
