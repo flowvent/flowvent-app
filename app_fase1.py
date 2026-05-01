@@ -113,6 +113,8 @@ st.markdown("""
   .rk-pts  { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; color:#00E676; text-align:right; }
   .rk-pts-label { font-size:.65rem; color:#444; text-align:right; letter-spacing:.08em; text-transform:uppercase; }
   .fv-footer { text-align:center; padding:2rem 0 0; font-size:.65rem; color:#2a2a3a; letter-spacing:.08em; text-transform:uppercase; }
+  div.stButton > button { background:#00E676 !important; color:#000 !important; font-weight:700 !important; border:none !important; border-radius:8px !important; padding:8px 20px !important; font-size:.8rem !important; letter-spacing:.06em !important; text-transform:uppercase !important; }
+  div.stButton > button:hover { background:#00c95e !important; color:#000 !important; }
 </style>
 """, unsafe_allow_html=True)
 
