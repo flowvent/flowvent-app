@@ -262,54 +262,80 @@ def render_mensajes():
             unsafe_allow_html=True
         )
 
+def hora_a_min(h):
+    try:
+        p = str(h).strip().split(":")
+        return int(p[0])*60 + int(p[1])
+    except: return 9999
+
 def render_envivo(df):
-    """Vista agrupada: Arena > Heat > WOD > lista de atletas"""
+    """Vista agrupada ordenada por fecha+hora: Arena > Heat > WOD > lista"""
     if df.empty:
         st.markdown('<div class="fv-empty">Sin actividad en este momento</div>', unsafe_allow_html=True)
         return
 
     estado_badge = {
-        "EN_CURSO": ('live','⚡ En Curso'),
-        "PROXIMO":  ('next','◷ Próximo'),
-        "FINALIZADO":('done','✓ Finalizado'),
+        "EN_CURSO":  ("live","⚡ En Curso"),
+        "PROXIMO":   ("next","◷ Próximo"),
+        "FINALIZADO":("done","✓ Finalizado"),
     }
 
-    arenas = sorted(df["arena"].dropna().unique().tolist())
-    for arena in arenas:
-        df_arena = df[df["arena"]==arena]
-        html = f'<div class="grp-arena"><div class="grp-arena-title">🏟️ {arena}</div>'
+    df = df.copy()
+    # Columna de ordenamiento: fecha + hora en minutos
+    if "fecha" in df.columns:
+        df["_sort_fecha"] = df["fecha"].astype(str).str.strip()
+    else:
+        df["_sort_fecha"] = ""
+    df["_sort_min"] = df["hora_inicio"].apply(hora_a_min)
 
-        # Agrupar por heat + wod
-        grupos = df_arena.groupby(["heat","wod_nombre","estado","hora_inicio"], sort=False)
-        heats_vistos = {}
-        for (heat, wod, estado, hora), grp in df_arena.groupby(["heat","wod_nombre","estado","hora_inicio"]):
-            key = (heat, wod)
-            if key in heats_vistos: continue
-            heats_vistos[key] = True
+    # Obtener grupos unicos ordenados: (fecha, hora_min, arena, heat, wod)
+    keys_df = df.drop_duplicates(["_sort_fecha","_sort_min","arena","heat","wod_nombre"])
+    keys_df = keys_df.sort_values(["_sort_fecha","_sort_min","arena","heat"])
 
-            bc, bt = estado_badge.get(estado, ('next',estado))
-            hora_str = parse_hora(hora)
-            try: heat_n = int(float(str(heat)))
-            except: heat_n = heat
+    html_por_arena = {}
+    for arena in sorted(df["arena"].dropna().unique()):
+        html_por_arena[arena] = f'<div class="grp-arena"><div class="grp-arena-title">🏟️ {arena}</div>'
 
-            html += (f'<div class="grp-heat">'
-                     f'<div class="grp-heat-header">'
-                     f'<span class="grp-heat-num">Heat #{heat_n}</span>'
-                     f'<span class="grp-wod-name">{wod}</span>'
-                     f'<span class="grp-estado-badge {bc}">{bt}</span>'
-                     f'<span class="grp-hora-tag">⏱ {hora_str}</span>'
-                     f'</div><div class="grp-atleta-list">')
+    for _,krow in keys_df.iterrows():
+        arena   = krow["arena"]
+        fecha_v = krow["_sort_fecha"]
+        hora_v  = krow["hora_inicio"]
+        heat    = krow["heat"]
+        wod     = krow["wod_nombre"]
 
-            for _,r in grp.iterrows():
-                res = str(r.get("resultado","")).strip()
-                res_html = f'<span class="grp-atleta-res">{res}</span>' if res else ""
-                html += (f'<div class="grp-atleta-row">'
-                         f'<span class="grp-atleta-name">{r["equipo"]}</span>'
-                         f'<span class="grp-atleta-cat">{cat_chip(r.get("categoria",""))}</span>'
-                         f'{res_html}</div>')
-            html += '</div></div>'
-        html += '</div>'
-        st.markdown(html, unsafe_allow_html=True)
+        mask = ((df["arena"]==arena) & (df["_sort_fecha"]==fecha_v) &
+                (df["hora_inicio"]==hora_v) & (df["heat"]==heat) & (df["wod_nombre"]==wod))
+        grp = df[mask]
+        if grp.empty: continue
+
+        estado   = grp.iloc[0]["estado"]
+        bc, bt   = estado_badge.get(estado, ("next",estado))
+        hora_str = parse_hora(hora_v)
+        fecha_str= f' · {fecha_v}' if fecha_v else ""
+        try: heat_n = int(float(str(heat)))
+        except: heat_n = heat
+
+        bloque = (f'<div class="grp-heat">'
+                  f'<div class="grp-heat-header">'
+                  f'<span class="grp-heat-num">Heat #{heat_n}</span>'
+                  f'<span class="grp-wod-name">{wod}</span>'
+                  f'<span class="grp-estado-badge {bc}">{bt}</span>'
+                  f'<span class="grp-hora-tag">⏱ {hora_str}{fecha_str}</span>'
+                  f'</div><div class="grp-atleta-list">')
+
+        for _,r in grp.iterrows():
+            res = str(r.get("resultado","")).strip()
+            res_html = f'<span class="grp-atleta-res">{res}</span>' if res else ""
+            bloque += (f'<div class="grp-atleta-row">'
+                       f'<span class="grp-atleta-name">{r["equipo"]}</span>'
+                       f'<span class="grp-atleta-cat">{cat_chip(r.get("categoria",""))}</span>'
+                       f'{res_html}</div>')
+        bloque += '</div></div>'
+        html_por_arena[arena] += bloque
+
+    for arena in sorted(df["arena"].dropna().unique()):
+        html_por_arena[arena] += '</div>'
+        st.markdown(html_por_arena[arena], unsafe_allow_html=True)
 
 def render_schedule(df):
     """Programa estatico ordenado cronologicamente por fecha y hora."""
