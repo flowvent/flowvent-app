@@ -85,8 +85,8 @@ st.markdown("""
   .sb-table th.arena-col { min-width:160px; color:#7a8fff; }
   .sb-table td { padding:8px 10px; border-bottom:1px solid #0f0f1a; vertical-align:top; }
   .sb-table td.hora-td { color:#FFFFFF; font-size:1rem; font-weight:700; white-space:nowrap; padding-top:12px; }
-  .sb-fecha { font-size:1.4rem; color:#FFFFFF; font-weight:800; display:block; letter-spacing:.03em; }
-  .sb-hora  { display:none; }
+  .sb-fecha { font-size:1rem; color:#00E676; font-weight:700; display:block; letter-spacing:.04em; margin-bottom:2px; }
+  .sb-hora  { font-size:1.4rem; color:#FFFFFF; font-weight:900; display:block; }
   .sb-cell { background:#11111C; border-radius:8px; padding:8px 10px; border:1px solid #1E1E35; margin-bottom:6px; }
   .sb-cell.st-live { border-left:3px solid #00E676; background:rgba(0,230,118,.05); }
   .sb-cell.st-next { border-left:3px solid #FFB300; }
@@ -312,45 +312,74 @@ def render_envivo(df):
         st.markdown(html, unsafe_allow_html=True)
 
 def render_schedule(df):
+    """Programa estatico ordenado cronologicamente por fecha y hora."""
     arenas = sorted(df["arena"].dropna().unique().tolist())
+
     if "fecha" in df.columns:
         df = df.copy()
-        df["_fh"] = df["fecha"].astype(str).str.strip() + "||" + df["hora_inicio"].astype(str).str.strip()
+        df["_fecha"] = df["fecha"].astype(str).str.strip()
+        df["_hora"]  = df["hora_inicio"].astype(str).str.strip()
     else:
         df = df.copy()
-        df["_fh"] = "||" + df["hora_inicio"].astype(str).str.strip()
-    claves = sorted(df["_fh"].dropna().unique().tolist(),
-                    key=lambda x: (x.split("||")[0], parse_hora(x.split("||")[1])))
+        df["_fecha"] = ""
+        df["_hora"]  = df["hora_inicio"].astype(str).str.strip()
+
+    # Obtener combinaciones unicas fecha+hora, ordenadas cronologicamente
+    def sort_key(row):
+        f = row["_fecha"]
+        h = row["_hora"]
+        try:
+            parts = h.split(":")
+            h_num = int(parts[0])*60 + int(parts[1])
+        except:
+            h_num = 0
+        return (f, h_num)
+
+    df["_sort"] = df.apply(sort_key, axis=1)
+    claves = df.drop_duplicates(["_fecha","_hora"]).sort_values("_sort")[["_fecha","_hora"]].values.tolist()
+
     if not arenas or not claves:
         st.warning("Sin datos para el programa."); return
+
     th = "".join(f'<th class="arena-col">🏟️ {a}</th>' for a in arenas)
-    html = f'<div class="sb-wrap"><table class="sb-table"><thead><tr><th class="hora-col">📅 Fecha / ⏱ Hora</th>{th}</tr></thead><tbody>'
+    html = (f'<div class="sb-wrap"><table class="sb-table">'
+            f'<thead><tr><th class="hora-col">📅 Fecha / ⏱ Hora</th>{th}</tr></thead><tbody>')
+
     em = {"EN_CURSO":"st-live","FINALIZADO":"st-done","PROXIMO":"st-next"}
     et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Listo","PROXIMO":"◷ Próximo"}
-    for clave in claves:
-        fecha_disp, hora_raw = clave.split("||")
-        hora_disp = parse_hora(hora_raw)
+
+    for (fecha_val, hora_val) in claves:
+        hora_disp = parse_hora(hora_val)
         html += (f'<tr><td class="hora-td">'
-                 f'<span class="sb-fecha">{fecha_disp}</span>'
+                 f'<span class="sb-fecha">{fecha_val}</span>'
                  f'<span class="sb-hora">{hora_disp}</span>'
                  f'</td>')
+
         for a in arenas:
-            rows = df[(df["_fh"]==clave)&(df["arena"]==a)]
-            if rows.empty:
+            mask = (df["_fecha"]==fecha_val) & (df["_hora"]==hora_val) & (df["arena"]==a)
+            rows_cell = df[mask]
+            if rows_cell.empty:
                 html += '<td><div class="sb-empty-cell">—</div></td>'
             else:
                 cells = ""
-                for _,r in rows.iterrows():
-                    sc = em.get(r["estado"],"st-next"); st2 = et.get(r["estado"],r["estado"])
+                seen = set()
+                for _,r in rows_cell.iterrows():
+                    key = (r["equipo"], r["heat"], r["wod_nombre"])
+                    if key in seen: continue
+                    seen.add(key)
+                    sc  = em.get(r["estado"],"st-next")
+                    st2 = et.get(r["estado"],r["estado"])
                     try: hn = int(float(str(r.get("heat",""))))
                     except: hn = r.get("heat","")
-                    cells += (f'<div class="sb-cell {sc}"><div class="sb-team">{r["equipo"]}</div>'
+                    cells += (f'<div class="sb-cell {sc}">'
+                              f'<div class="sb-team">{r["equipo"]}</div>'
                               f'<div class="sb-wod">{r["wod_nombre"]}</div>'
                               f'<div class="sb-heat">Heat #{hn}</div>'
                               f'<div style="margin-top:4px">{cat_chip(r.get("categoria",""))}</div>'
                               f'<span class="sb-estado {sc}">{st2}</span></div>')
                 html += f'<td>{cells}</td>'
         html += '</tr>'
+
     html += '</tbody></table></div>'
     st.markdown(html, unsafe_allow_html=True)
 
