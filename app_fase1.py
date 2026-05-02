@@ -34,13 +34,13 @@ st.markdown("""
   .fv-live-dot  { width:7px; height:7px; background:#00E676; border-radius:50%; animation:pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(1.4)} }
   @keyframes fadeInUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  .ev-card { background:#0E0E1A; border:1px solid #1E1E35; border-top:4px solid #00E676; border-radius:18px; padding:32px 28px; margin-bottom:4px; animation:fadeInUp .3s ease both; transition:transform .18s ease, box-shadow .18s ease; }
-  .ev-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,230,118,.12); }
-  .ev-nombre { font-family:'Barlow Condensed',sans-serif; font-size:2.2rem; font-weight:900; color:#FFF; text-transform:uppercase; margin:0 0 10px; letter-spacing:.03em; line-height:1.1; }
-  .ev-desc { font-size:.95rem; color:#666; margin:0 0 16px; line-height:1.6; }
-  .ev-meta { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:4px; }
-  .ev-meta-item { font-size:.82rem; color:#555; }
-  .ev-badge { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:5px 14px; border-radius:20px; background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
+  .ev-card { background:#0E0E1A; border:1px solid #1E1E35; border-top:4px solid #00E676; border-radius:20px; padding:48px 40px; margin-bottom:4px; animation:fadeInUp .3s ease both; transition:transform .18s ease, box-shadow .18s ease; }
+  .ev-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,230,118,.15); }
+  .ev-nombre { font-family:'Barlow Condensed',sans-serif; font-size:3.2rem; font-weight:900; color:#FFF; text-transform:uppercase; margin:0 0 14px; letter-spacing:.03em; line-height:1.1; }
+  .ev-desc { font-size:1.1rem; color:#666; margin:0 0 20px; line-height:1.6; }
+  .ev-meta { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:6px; }
+  .ev-meta-item { font-size:.95rem; color:#555; }
+  .ev-badge { display:inline-block; font-size:.82rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:7px 18px; border-radius:20px; background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
   .ev-event-name { font-family:'Barlow Condensed',sans-serif; font-size:1.1rem; font-weight:700; color:#00E676; text-transform:uppercase; letter-spacing:.06em; }
   .cat-chip { display:inline-block; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
   .cat-RX      { background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
@@ -81,10 +81,12 @@ st.markdown("""
   .sb-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .sb-table { width:100%; border-collapse:separate; border-spacing:0; font-size:.82rem; }
   .sb-table th { background:#0E0E1A; color:#555; font-size:.65rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; padding:10px 14px; border-bottom:1px solid #1E1E35; text-align:center; }
-  .sb-table th.hora-col { text-align:left; color:#444; min-width:60px; }
+  .sb-table th.hora-col { text-align:left; color:#444; min-width:100px; }
   .sb-table th.arena-col { min-width:160px; color:#7a8fff; }
   .sb-table td { padding:8px 10px; border-bottom:1px solid #0f0f1a; vertical-align:top; }
-  .sb-table td.hora-td { color:#444; font-size:.72rem; font-weight:600; white-space:nowrap; padding-top:12px; }
+  .sb-table td.hora-td { color:#FFFFFF; font-size:1rem; font-weight:700; white-space:nowrap; padding-top:12px; }
+  .sb-fecha { font-size:1.4rem; color:#FFFFFF; font-weight:800; display:block; letter-spacing:.03em; }
+  .sb-hora  { display:none; }
   .sb-cell { background:#11111C; border-radius:8px; padding:8px 10px; border:1px solid #1E1E35; margin-bottom:6px; }
   .sb-cell.st-live { border-left:3px solid #00E676; background:rgba(0,230,118,.05); }
   .sb-cell.st-next { border-left:3px solid #FFB300; }
@@ -108,6 +110,22 @@ st.markdown("""
   .rk-team { font-family:'Barlow Condensed',sans-serif; font-size:1.2rem; font-weight:700; color:#FFF; text-transform:uppercase; }
   .rk-pts  { font-family:'Barlow Condensed',sans-serif; font-size:1.5rem; font-weight:900; color:#00E676; text-align:right; }
   .rk-pts-label { font-size:.65rem; color:#444; text-align:right; letter-spacing:.08em; text-transform:uppercase; }
+  .grp-arena { margin-bottom:2rem; }
+  .grp-arena-title { font-family:'Barlow Condensed',sans-serif; font-size:1.3rem; font-weight:800; color:#7a8fff; text-transform:uppercase; letter-spacing:.1em; padding:8px 0 6px; border-bottom:1px solid #1a1a2e; margin-bottom:1rem; }
+  .grp-heat { background:#0E0E1A; border-radius:12px; border:1px solid #1E1E35; margin-bottom:12px; overflow:hidden; }
+  .grp-heat-header { display:flex; align-items:center; gap:14px; padding:10px 16px; background:#111120; border-bottom:1px solid #1E1E35; }
+  .grp-heat-num { font-family:'Barlow Condensed',sans-serif; font-size:1rem; font-weight:800; color:#FFF; text-transform:uppercase; letter-spacing:.06em; }
+  .grp-wod-name { font-family:'Barlow Condensed',sans-serif; font-size:.95rem; font-weight:600; color:#00E676; }
+  .grp-hora-tag { font-size:.7rem; color:#555; margin-left:auto; }
+  .grp-estado-badge { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 9px; border-radius:12px; }
+  .grp-estado-badge.live { background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
+  .grp-estado-badge.next { background:rgba(255,179,0,.15); color:#FFB300; border:1px solid rgba(255,179,0,.3); }
+  .grp-estado-badge.done { background:rgba(80,80,100,.2); color:#666; border:1px solid #2a2a3a; }
+  .grp-atleta-list { padding:8px 16px 12px; display:flex; flex-direction:column; gap:5px; }
+  .grp-atleta-row { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:7px; background:#13131F; }
+  .grp-atleta-name { font-size:.85rem; font-weight:500; color:#CCC; }
+  .grp-atleta-cat { font-size:.6rem; }
+  .grp-atleta-res { font-size:.82rem; font-weight:600; color:#00E676; }
   .fv-footer { text-align:center; padding:2rem 0 0; font-size:.65rem; color:#2a2a3a; letter-spacing:.08em; text-transform:uppercase; }
 </style>
 """, unsafe_allow_html=True)
@@ -150,7 +168,7 @@ def load_data(evento_nombre: str):
     data = ws.get_all_records()
     if not data: return pd.DataFrame()
     df = pd.DataFrame(data)
-    cols = ["event_id","event_name","equipo","categoria","heat","wod_nombre","arena","estado","hora_inicio","resultado","puntos","tipo_puntaje","orden_display","activo"]
+    cols = ["event_id","event_name","equipo","categoria","heat","wod_nombre","arena","estado","fecha","hora_inicio","resultado","puntos","tipo_puntaje","orden_display","activo"]
     for c in cols:
         if c not in df.columns: df[c] = ""
     df = df.dropna(subset=["event_id","equipo","estado"])
@@ -244,54 +262,80 @@ def render_mensajes():
             unsafe_allow_html=True
         )
 
-def render_card(row):
-    estado = row["estado"]
-    cc = {"EN_CURSO":"card-live","FINALIZADO":"card-done","PROXIMO":"card-next"}.get(estado,"")
-    bc = {"EN_CURSO":"badge-live","FINALIZADO":"badge-done","PROXIMO":"badge-next"}.get(estado,"")
-    bt = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Finalizado","PROXIMO":"◷ Próximo"}.get(estado,estado)
-    hora = parse_hora(row.get("hora_inicio",""))
-    hf = f'<div class="fv-field"><span class="fv-label">Hora</span><span class="fv-value">{hora}</span></div>' if hora else ""
-    res = str(row.get("resultado","")).strip()
-    rc  = "res-live" if estado=="EN_CURSO" else "res-done"
-    rf  = f'<div class="fv-field"><span class="fv-label">Resultado</span><span class="fv-value {rc}">{res}</span></div>' if res else ""
-    try: hv = f"# {int(float(str(row.get('heat',''))))}"
-    except: hv = f"# {row.get('heat','—')}"
-    return (
-        f'<div class="fv-card {cc}">'
-        f'<div class="fv-card-header">'
-        f'<div class="fv-card-header-left"><span class="fv-equipo">{row["equipo"]}</span>{cat_chip(row.get("categoria",""))}</div>'
-        f'<span class="fv-badge {bc}">{bt}</span>'
-        f'</div>'
-        f'<div class="fv-card-body">'
-        f'<div class="fv-field"><span class="fv-label">WOD</span><span class="fv-value wod">{row["wod_nombre"]}</span></div>'
-        f'<div class="fv-field"><span class="fv-label">Heat</span><span class="fv-value">{hv}</span></div>'
-        f'<div class="fv-field"><span class="fv-label">Arena</span><span class="fv-value arena-val">{row["arena"]}</span></div>'
-        f'{hf}{rf}</div></div>'
-    )
-
-def render_section(df_sec, label, sec_cls):
-    st.markdown(f'<div class="fv-section {sec_cls}"><span class="fv-section-text">{label}</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
-    if df_sec.empty:
+def render_envivo(df):
+    """Vista agrupada: Arena > Heat > WOD > lista de atletas"""
+    if df.empty:
         st.markdown('<div class="fv-empty">Sin actividad en este momento</div>', unsafe_allow_html=True)
-    else:
-        cols = st.columns(min(len(df_sec),3))
-        for i,(_, row) in enumerate(df_sec.iterrows()):
-            with cols[i%3]: st.markdown(render_card(row), unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
+        return
+
+    estado_badge = {
+        "EN_CURSO": ('live','⚡ En Curso'),
+        "PROXIMO":  ('next','◷ Próximo'),
+        "FINALIZADO":('done','✓ Finalizado'),
+    }
+
+    arenas = sorted(df["arena"].dropna().unique().tolist())
+    for arena in arenas:
+        df_arena = df[df["arena"]==arena]
+        html = f'<div class="grp-arena"><div class="grp-arena-title">🏟️ {arena}</div>'
+
+        # Agrupar por heat + wod
+        grupos = df_arena.groupby(["heat","wod_nombre","estado","hora_inicio"], sort=False)
+        heats_vistos = {}
+        for (heat, wod, estado, hora), grp in df_arena.groupby(["heat","wod_nombre","estado","hora_inicio"]):
+            key = (heat, wod)
+            if key in heats_vistos: continue
+            heats_vistos[key] = True
+
+            bc, bt = estado_badge.get(estado, ('next',estado))
+            hora_str = parse_hora(hora)
+            try: heat_n = int(float(str(heat)))
+            except: heat_n = heat
+
+            html += (f'<div class="grp-heat">'
+                     f'<div class="grp-heat-header">'
+                     f'<span class="grp-heat-num">Heat #{heat_n}</span>'
+                     f'<span class="grp-wod-name">{wod}</span>'
+                     f'<span class="grp-estado-badge {bc}">{bt}</span>'
+                     f'<span class="grp-hora-tag">⏱ {hora_str}</span>'
+                     f'</div><div class="grp-atleta-list">')
+
+            for _,r in grp.iterrows():
+                res = str(r.get("resultado","")).strip()
+                res_html = f'<span class="grp-atleta-res">{res}</span>' if res else ""
+                html += (f'<div class="grp-atleta-row">'
+                         f'<span class="grp-atleta-name">{r["equipo"]}</span>'
+                         f'<span class="grp-atleta-cat">{cat_chip(r.get("categoria",""))}</span>'
+                         f'{res_html}</div>')
+            html += '</div></div>'
+        html += '</div>'
+        st.markdown(html, unsafe_allow_html=True)
 
 def render_schedule(df):
     arenas = sorted(df["arena"].dropna().unique().tolist())
-    horas  = sorted(df["hora_inicio"].dropna().unique().tolist(), key=parse_hora)
-    if not arenas or not horas:
+    if "fecha" in df.columns:
+        df = df.copy()
+        df["_fh"] = df["fecha"].astype(str).str.strip() + "||" + df["hora_inicio"].astype(str).str.strip()
+    else:
+        df = df.copy()
+        df["_fh"] = "||" + df["hora_inicio"].astype(str).str.strip()
+    claves = sorted(df["_fh"].dropna().unique().tolist(),
+                    key=lambda x: (x.split("||")[0], parse_hora(x.split("||")[1])))
+    if not arenas or not claves:
         st.warning("Sin datos para el programa."); return
     th = "".join(f'<th class="arena-col">🏟️ {a}</th>' for a in arenas)
-    html = f'<div class="sb-wrap"><table class="sb-table"><thead><tr><th class="hora-col">⏱ Hora</th>{th}</tr></thead><tbody>'
+    html = f'<div class="sb-wrap"><table class="sb-table"><thead><tr><th class="hora-col">📅 Fecha / ⏱ Hora</th>{th}</tr></thead><tbody>'
     em = {"EN_CURSO":"st-live","FINALIZADO":"st-done","PROXIMO":"st-next"}
     et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Listo","PROXIMO":"◷ Próximo"}
-    for h in horas:
-        html += f'<tr><td class="hora-td">{parse_hora(h)}</td>'
+    for clave in claves:
+        fecha_disp, hora_raw = clave.split("||")
+        hora_disp = parse_hora(hora_raw)
+        html += (f'<tr><td class="hora-td">'
+                 f'<span class="sb-fecha">{fecha_disp}</span>'
+                 f'<span class="sb-hora">{hora_disp}</span>'
+                 f'</td>')
         for a in arenas:
-            rows = df[(df["hora_inicio"]==h)&(df["arena"]==a)]
+            rows = df[(df["_fh"]==clave)&(df["arena"]==a)]
             if rows.empty:
                 html += '<td><div class="sb-empty-cell">—</div></td>'
             else:
@@ -411,14 +455,17 @@ def main():
         dv = df.copy()
         if cat_sel!="Todas las categorías": dv = dv[dv["categoria"]==cat_sel]
         if arena_sel!="Todas las arenas":   dv = dv[dv["arena"]==arena_sel]
-        dl,dn,dd = dv[dv["estado"]=="EN_CURSO"], dv[dv["estado"]=="PROXIMO"], dv[dv["estado"]=="FINALIZADO"]
-        c1,c2,c3,c4 = st.columns(4)
-        c1.metric("Total Heats",len(dv)); c2.metric("⚡ En Curso",len(dl))
-        c3.metric("◷ Próximos",len(dn));  c4.metric("✓ Finalizados",len(dd))
-        st.markdown("<br>", unsafe_allow_html=True)
-        render_section(dl,"⚡ En Curso","sec-live")
-        render_section(dn,"◷ Próximamente","sec-next")
-        render_section(dd,"✓ Finalizado","sec-done")
+        # En Curso primero
+        dl = dv[dv["estado"]=="EN_CURSO"]
+        dn = dv[dv["estado"]=="PROXIMO"]
+        if not dl.empty:
+            st.markdown('<div class="fv-section sec-live"><span class="fv-section-text">⚡ En Curso</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
+            render_envivo(dl)
+        if not dn.empty:
+            st.markdown('<div class="fv-section sec-next"><span class="fv-section-text">◷ Próximamente</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
+            render_envivo(dn)
+        if dl.empty and dn.empty:
+            st.markdown('<div class="fv-empty">Sin actividad activa en este momento</div>', unsafe_allow_html=True)
     elif vista=="📋  Programa":
         cat_sel = st.selectbox("Categoría", cat_opts, label_visibility="collapsed")
         dv = df if cat_sel=="Todas las categorías" else df[df["categoria"]==cat_sel]
