@@ -362,7 +362,15 @@ def render_schedule(df):
         return (f, h_num)
 
     df["_sort"] = df.apply(sort_key, axis=1)
-    claves = df.drop_duplicates(["_fecha","_hora"]).sort_values("_sort")[["_fecha","_hora"]].values.tolist()
+    # Convertir fecha DD/MM/YYYY a YYYY-MM-DD para ordenar correctamente
+    def fecha_sort(f):
+        try:
+            p = str(f).strip().split("/")
+            return f"{p[2]}-{p[1]}-{p[0]}"
+        except: return f
+    df["_fecha_iso"] = df["_fecha"].apply(fecha_sort)
+    df["_sort2"] = df["_fecha_iso"].astype(str) + " " + df["_sort"].astype(str).str.zfill(4)
+    claves = df.drop_duplicates(["_fecha","_hora"]).sort_values("_sort2")[["_fecha","_hora"]].values.tolist()
 
     if not arenas or not claves:
         st.warning("Sin datos para el programa."); return
