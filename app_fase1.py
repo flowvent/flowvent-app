@@ -131,6 +131,20 @@ st.markdown("""
   .grp-atleta-name { font-size:.85rem; font-weight:500; color:#CCC; }
   .grp-atleta-cat { font-size:.6rem; }
   .grp-atleta-res { font-size:.82rem; font-weight:600; color:#00E676; }
+
+  /* ── PANEL OPERADOR ── */
+  .op-header { background:#0E0E1A; border:1px solid #1E1E35; border-top:3px solid #FFB300; border-radius:14px; padding:16px 20px; margin-bottom:1.5rem; display:flex; align-items:center; justify-content:space-between; }
+  .op-title { font-family:'Barlow Condensed',sans-serif; font-size:1.4rem; font-weight:800; color:#FFB300; text-transform:uppercase; letter-spacing:.08em; }
+  .op-evento { font-size:.75rem; color:#555; margin-top:2px; }
+  .op-section { background:#0E0E1A; border:1px solid #1E1E35; border-radius:12px; padding:16px 20px; margin-bottom:1rem; }
+  .op-section-title { font-family:'Barlow Condensed',sans-serif; font-size:1rem; font-weight:700; color:#FFF; text-transform:uppercase; letter-spacing:.1em; margin-bottom:1rem; padding-bottom:.5rem; border-bottom:1px solid #1E1E35; }
+  .op-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #13131F; gap:8px; flex-wrap:wrap; }
+  .op-row:last-child { border-bottom:none; }
+  .op-atleta { font-size:.85rem; font-weight:500; color:#CCC; flex:1; min-width:120px; }
+  .op-heat-tag { font-size:.7rem; color:#555; }
+  .op-login { max-width:400px; margin:4rem auto; background:#0E0E1A; border:1px solid #1E1E35; border-top:3px solid #FFB300; border-radius:16px; padding:32px; }
+  .op-login-title { font-family:'Barlow Condensed',sans-serif; font-size:1.8rem; font-weight:900; color:#FFB300; text-transform:uppercase; text-align:center; margin-bottom:4px; }
+  .op-login-sub { font-size:.78rem; color:#555; text-align:center; margin-bottom:1.5rem; letter-spacing:.06em; text-transform:uppercase; }
   .fv-footer { text-align:center; padding:2rem 0 0; font-size:.65rem; color:#2a2a3a; letter-spacing:.08em; text-transform:uppercase; }
 </style>
 """, unsafe_allow_html=True)
@@ -466,6 +480,191 @@ def render_header():
         '<div class="fv-live-badge"><div class="fv-live-dot"></div>EN VIVO</div>'
         '</div>', unsafe_allow_html=True)
 
+
+def check_login(usuario, password):
+    """Verifica credenciales contra secrets.toml"""
+    try:
+        ops = st.secrets.get("operadores", {})
+        return ops.get(usuario) == password
+    except:
+        return False
+
+def update_sheet_cell(evento_nombre, event_id, col_name, new_value):
+    """Actualiza una celda especifica en Google Sheets."""
+    try:
+        client, url = get_client()
+        sh = client.open_by_url(url)
+        ws = sh.worksheet("events")
+        headers = ws.row_values(1)
+        if col_name not in headers:
+            return False, f"Columna '{col_name}' no encontrada"
+        col_idx = headers.index(col_name) + 1
+        # Buscar la fila por event_id
+        id_col = headers.index("event_id") + 1
+        cell = ws.find(str(event_id), in_column=id_col)
+        if not cell:
+            return False, "Heat no encontrado"
+        ws.update_cell(cell.row, col_idx, new_value)
+        return True, "OK"
+    except Exception as e:
+        return False, str(e)
+
+def update_mensaje(mensaje_id, campo, valor):
+    """Actualiza un campo en la hoja mensajes."""
+    try:
+        client, url = get_client()
+        sh = client.open_by_url(url)
+        ws = sh.worksheet("mensajes")
+        headers = ws.row_values(1)
+        if campo not in headers:
+            return False, f"Columna '{campo}' no encontrada"
+        col_idx = headers.index(campo) + 1
+        id_col  = headers.index("mensaje_id") + 1
+        cell = ws.find(str(mensaje_id), in_column=id_col)
+        if not cell:
+            return False, "Mensaje no encontrado"
+        ws.update_cell(cell.row, col_idx, valor)
+        return True, "OK"
+    except Exception as e:
+        return False, str(e)
+
+def add_mensaje_nuevo(texto, tipo):
+    """Agrega un nuevo mensaje a la hoja mensajes."""
+    try:
+        client, url = get_client()
+        sh = client.open_by_url(url)
+        ws = sh.worksheet("mensajes")
+        all_vals = ws.get_all_values()
+        next_id = len(all_vals)  # fila siguiente
+        ws.append_row([next_id, texto, tipo, "SI", 5])
+        return True, "OK"
+    except Exception as e:
+        return False, str(e)
+
+def panel_operador(evento_sel, df):
+    """Panel completo de operador."""
+    st.markdown(
+        f'<div class="op-header">'
+        f'<div><div class="op-title">⚙️ Panel Operador</div>'
+        f'<div class="op-evento">{evento_sel}</div></div>'
+        f'<div style="font-size:.7rem;color:#FFB300;letter-spacing:.08em;text-transform:uppercase">Sesión activa</div>'
+        f'</div>', unsafe_allow_html=True)
+
+    if st.button("← Salir del panel", key="op_salir"):
+        del st.session_state["op_autenticado"]
+        del st.session_state["op_usuario"]
+        st.rerun()
+
+    tab1, tab2, tab3 = st.tabs(["⚡ Actualizar Heats", "📢 Mensajes en Vivo", "✅ Finalizar Heat"])
+
+    # ── TAB 1: Cambiar estado de heats ──
+    with tab1:
+        st.markdown("**Cambiá el estado de cualquier heat en tiempo real.**")
+        df_activos = df[df["estado"].isin(["EN_CURSO","PROXIMO"])].copy()
+        if df_activos.empty:
+            st.info("No hay heats activos o próximos.")
+        else:
+            categorias_op = sorted(df_activos["categoria"].dropna().unique().tolist())
+            cat_op = st.selectbox("Categoría", categorias_op, key="op_cat")
+            df_cat = df_activos[df_activos["categoria"]==cat_op]
+            arenas_op = sorted(df_cat["arena"].dropna().unique().tolist())
+            arena_op = st.selectbox("Arena", arenas_op, key="op_arena")
+            df_filtrado = df_cat[df_cat["arena"]==arena_op]
+
+            # Agrupar por heat
+            grupos = df_filtrado.groupby(["heat","wod_nombre","estado","hora_inicio"])
+            for (heat, wod, estado_actual, hora), grp in grupos:
+                try: hn = int(float(str(heat)))
+                except: hn = heat
+                hora_str = parse_hora(hora)
+                atletas = grp["equipo"].tolist()
+                ids = grp["event_id"].tolist()
+
+                with st.expander(f"Heat #{hn} — {wod} — {hora_str} [{estado_actual}]"):
+                    st.write(f"**Atletas ({len(atletas)}):** " + ", ".join(atletas[:5]) + ("..." if len(atletas)>5 else ""))
+                    nuevo_estado = st.selectbox(
+                        "Nuevo estado",
+                        ["EN_CURSO","PROXIMO","FINALIZADO"],
+                        index=["EN_CURSO","PROXIMO","FINALIZADO"].index(estado_actual),
+                        key=f"estado_{heat}_{wod}"
+                    )
+                    if st.button(f"Actualizar Heat #{hn}", key=f"upd_{heat}_{wod}_{arena_op}"):
+                        errores = 0
+                        for eid in ids:
+                            ok, msg = update_sheet_cell(evento_sel, eid, "estado", nuevo_estado)
+                            if not ok: errores += 1
+                        if errores == 0:
+                            st.success(f"✅ Heat #{hn} actualizado a {nuevo_estado}")
+                            st.cache_data.clear()
+                        else:
+                            st.error(f"❌ {errores} errores al actualizar")
+
+    # ── TAB 2: Mensajes en vivo ──
+    with tab2:
+        st.markdown("**Enviá mensajes que aparecen en pantalla en tiempo real.**")
+
+        with st.form("form_nuevo_mensaje"):
+            texto_nuevo = st.text_input("Texto del mensaje", placeholder="Ej: ¡Arranca el Heat Final!")
+            tipo_nuevo  = st.selectbox("Tipo", ["INFO","ALERTA","GANADOR"])
+            if st.form_submit_button("📢 Publicar mensaje", use_container_width=True):
+                if texto_nuevo.strip():
+                    ok, msg = add_mensaje_nuevo(texto_nuevo.strip().upper(), tipo_nuevo)
+                    if ok:
+                        st.success("✅ Mensaje publicado — aparece en pantalla en 15 segundos")
+                        st.cache_data.clear()
+                    else:
+                        st.error(f"❌ Error: {msg}")
+                else:
+                    st.warning("Escribí un mensaje antes de publicar.")
+
+        st.markdown("---")
+        st.markdown("**Mensajes activos:**")
+        try:
+            df_msg = load_mensajes()
+            if df_msg.empty:
+                st.info("No hay mensajes activos.")
+            else:
+                for _, msg in df_msg.iterrows():
+                    col1, col2 = st.columns([4,1])
+                    col1.write(f"**{msg.get('tipo','')}** — {msg.get('texto','')}")
+                    if col2.button("🔕 Desactivar", key=f"msg_off_{msg['mensaje_id']}"):
+                        ok, err = update_mensaje(msg["mensaje_id"], "activo", "NO")
+                        if ok:
+                            st.success("Mensaje desactivado")
+                            st.cache_data.clear()
+                            st.rerun()
+        except:
+            st.info("Sin mensajes activos.")
+
+    # ── TAB 3: Cargar resultado ──
+    with tab3:
+        st.markdown("**Cargá el resultado de un heat finalizado.**")
+        df_fin = df[df["estado"]=="EN_CURSO"].copy()
+        if df_fin.empty:
+            st.info("No hay heats EN_CURSO en este momento.")
+        else:
+            grupos = df_fin.groupby(["heat","wod_nombre","arena","categoria"])
+            for (heat, wod, arena, cat), grp in grupos:
+                try: hn = int(float(str(heat)))
+                except: hn = heat
+                with st.expander(f"Heat #{hn} — {wod} — {cat} — {arena}"):
+                    for _, r in grp.iterrows():
+                        col1, col2, col3 = st.columns([3,2,1])
+                        col1.write(r["equipo"])
+                        resultado_input = col2.text_input(
+                            "Resultado (MM:SS.mmm)",
+                            value=str(r.get("resultado","")).strip(),
+                            key=f"res_{r['event_id']}"
+                        )
+                        if col3.button("✓", key=f"save_res_{r['event_id']}"):
+                            ok1, _ = update_sheet_cell(evento_sel, r["event_id"], "resultado", resultado_input)
+                            ok2, _ = update_sheet_cell(evento_sel, r["event_id"], "estado", "FINALIZADO")
+                            if ok1 and ok2:
+                                st.success(f"✅ {r['equipo']} — {resultado_input}")
+                                st.cache_data.clear()
+                            else:
+                                st.error("Error al guardar")
+
 def main():
     render_header()
     params = st.query_params
@@ -495,9 +694,16 @@ def main():
                     f'<div class="ev-meta"><span class="ev-meta-item">📅 {fecha}</span>&nbsp;&nbsp;<span class="ev-meta-item">📍 {lugar}</span></div>'
                     f'<div style="margin-top:12px"><span class="ev-badge">⚡ En vivo</span></div>'
                     f'</div>', unsafe_allow_html=True)
-                if st.button("Ingresar →", key=f"ev_{i}", use_container_width=True):
-                    st.query_params["evento"] = nombre
-                    st.rerun()
+                col_ing, col_op = st.columns([3,1])
+                with col_ing:
+                    if st.button("Ingresar →", key=f"ev_{i}", use_container_width=True):
+                        st.query_params["evento"] = nombre
+                        st.rerun()
+                with col_op:
+                    if st.button("⚙️ OP", key=f"op_{i}", use_container_width=True):
+                        st.query_params["evento"] = nombre
+                        st.query_params["panel"] = "operador"
+                        st.rerun()
         return
 
     if st.button("← Volver a eventos"):
@@ -509,6 +715,29 @@ def main():
 
     if df.empty:
         st.warning(f"Sin datos activos para '{evento_sel}'."); return
+
+    # ── PANEL OPERADOR ──
+    panel_mode = st.query_params.get("panel", None)
+    if panel_mode == "operador":
+        if "op_autenticado" not in st.session_state:
+            st.markdown(
+                '<div class="op-login">'
+                '<div class="op-login-title">⚙️ Operador</div>'
+                '<div class="op-login-sub">Acceso restringido · Flowvent</div>'
+                '</div>', unsafe_allow_html=True)
+            with st.form("login_form"):
+                usuario  = st.text_input("Usuario", placeholder="operador1")
+                password = st.text_input("Contraseña", type="password")
+                if st.form_submit_button("Ingresar", use_container_width=True):
+                    if check_login(usuario, password):
+                        st.session_state["op_autenticado"] = True
+                        st.session_state["op_usuario"] = usuario
+                        st.rerun()
+                    else:
+                        st.error("Credenciales incorrectas")
+            return
+        panel_operador(evento_sel, df)
+        return
 
     st.markdown(f'<div style="margin-bottom:1rem"><span class="ev-event-name">⚡ {evento_sel}</span></div>', unsafe_allow_html=True)
 
