@@ -565,10 +565,10 @@ def panel_operador(evento_sel, df):
             st.info("No hay heats activos o próximos.")
         else:
             categorias_op = sorted(df_activos["categoria"].dropna().unique().tolist())
-            cat_op = st.selectbox("Categoría", categorias_op, key="op_cat")
+            cat_op = st.radio("Categoría", categorias_op, horizontal=True, key="op_cat")
             df_cat = df_activos[df_activos["categoria"]==cat_op]
             arenas_op = sorted(df_cat["arena"].dropna().unique().tolist())
-            arena_op = st.selectbox("Arena", arenas_op, key="op_arena")
+            arena_op = st.radio("Arena", arenas_op, horizontal=True, key="op_arena")
             df_filtrado = df_cat[df_cat["arena"]==arena_op]
 
             # Agrupar por heat
@@ -636,34 +636,68 @@ def panel_operador(evento_sel, df):
         except:
             st.info("Sin mensajes activos.")
 
-    # ── TAB 3: Cargar resultado ──
+    # ── TAB 3: Cargar resultados y puntos por heat ──
     with tab3:
-        st.markdown("**Cargá el resultado de un heat finalizado.**")
-        df_fin = df[df["estado"]=="EN_CURSO"].copy()
-        if df_fin.empty:
+        st.markdown("**Cargá resultados y puntos de un heat completo. Un solo botón finaliza todo el heat.**")
+        df_en_curso = df[df["estado"]=="EN_CURSO"].copy()
+        if df_en_curso.empty:
             st.info("No hay heats EN_CURSO en este momento.")
         else:
-            grupos = df_fin.groupby(["heat","wod_nombre","arena","categoria"])
-            for (heat, wod, arena, cat), grp in grupos:
-                try: hn = int(float(str(heat)))
-                except: hn = heat
-                with st.expander(f"Heat #{hn} — {wod} — {cat} — {arena}"):
+            # Heat es unico por numero — agrupar solo por heat
+            heats_unicos = sorted(df_en_curso["heat"].unique().tolist())
+            for heat_num in heats_unicos:
+                grp = df_en_curso[df_en_curso["heat"]==heat_num].copy()
+                wod     = grp.iloc[0]["wod_nombre"]
+                arena   = grp.iloc[0]["arena"]
+                cat     = grp.iloc[0]["categoria"]
+                hora    = parse_hora(grp.iloc[0]["hora_inicio"])
+                fecha_h = str(grp.iloc[0].get("fecha","")).strip()
+                try: hn = int(float(str(heat_num)))
+                except: hn = heat_num
+
+                label = f"Heat #{hn} — {wod} — {cat} — {arena}"
+                if fecha_h: label += f" — {fecha_h} {hora}"
+
+                with st.expander(label):
+                    st.markdown(f"**{len(grp)} atletas en este heat**")
+
+                    # Inputs por atleta
+                    inputs = {}
                     for _, r in grp.iterrows():
-                        col1, col2, col3 = st.columns([3,2,1])
-                        col1.write(r["equipo"])
-                        resultado_input = col2.text_input(
-                            "Resultado (MM:SS.mmm)",
+                        eid = r["event_id"]
+                        equipo = r["equipo"]
+                        col1, col2, col3 = st.columns([3,2,2])
+                        col1.markdown(f"<span style='font-size:.85rem;color:#CCC'>{equipo}</span>", unsafe_allow_html=True)
+                        res_val = col2.text_input(
+                            "Resultado",
                             value=str(r.get("resultado","")).strip(),
-                            key=f"res_{r['event_id']}"
+                            placeholder="58:32.450",
+                            key=f"res3_{eid}",
+                            label_visibility="collapsed"
                         )
-                        if col3.button("✓", key=f"save_res_{r['event_id']}"):
-                            ok1, _ = update_sheet_cell(evento_sel, r["event_id"], "resultado", resultado_input)
-                            ok2, _ = update_sheet_cell(evento_sel, r["event_id"], "estado", "FINALIZADO")
-                            if ok1 and ok2:
-                                st.success(f"✅ {r['equipo']} — {resultado_input}")
-                                st.cache_data.clear()
-                            else:
-                                st.error("Error al guardar")
+                        pts_val = col3.text_input(
+                            "Puntos",
+                            value=str(int(r["puntos"])) if r["puntos"] else "",
+                            placeholder="Pts",
+                            key=f"pts3_{eid}",
+                            label_visibility="collapsed"
+                        )
+                        inputs[eid] = (equipo, res_val, pts_val)
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button(f"✅ Finalizar Heat #{hn} completo", key=f"fin_heat_{hn}", use_container_width=True):
+                        errores = 0
+                        for eid, (equipo, res, pts) in inputs.items():
+                            ok1,_ = update_sheet_cell(evento_sel, eid, "resultado", res)
+                            ok2,_ = update_sheet_cell(evento_sel, eid, "puntos",   pts if pts else "0")
+                            ok3,_ = update_sheet_cell(evento_sel, eid, "estado",   "FINALIZADO")
+                            if not (ok1 and ok2 and ok3): errores += 1
+                        if errores == 0:
+                            st.success(f"✅ Heat #{hn} finalizado — {len(inputs)} atletas actualizados")
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {errores} errores al guardar. Reintentá.")
 
 def main():
     render_header()
@@ -751,9 +785,8 @@ def main():
     arena_opts = ["Todas las arenas"] + sorted(df["arena"].dropna().unique().tolist())
 
     if vista=="⚡  En Vivo":
-        fc,fa = st.columns(2)
-        cat_sel   = fc.selectbox("Categoría", cat_opts,  label_visibility="collapsed")
-        arena_sel = fa.selectbox("Arena",     arena_opts, label_visibility="collapsed")
+        cat_sel   = st.radio("Categoría", cat_opts,  horizontal=True, label_visibility="collapsed", key="cat_envivo")
+        arena_sel = st.radio("Arena",     arena_opts, horizontal=True, label_visibility="collapsed", key="arena_envivo")
         dv = df.copy()
         if cat_sel!="Todas las categorías": dv = dv[dv["categoria"]==cat_sel]
         if arena_sel!="Todas las arenas":   dv = dv[dv["arena"]==arena_sel]
@@ -769,12 +802,12 @@ def main():
         if dl.empty and dn.empty:
             st.markdown('<div class="fv-empty">Sin actividad activa en este momento</div>', unsafe_allow_html=True)
     elif vista=="📋  Programa":
-        cat_sel = st.selectbox("Categoría", cat_opts, label_visibility="collapsed")
+        cat_sel = st.radio("Categoría", cat_opts, horizontal=True, label_visibility="collapsed", key="cat_prog")
         dv = df if cat_sel=="Todas las categorías" else df[df["categoria"]==cat_sel]
         st.markdown('<div class="fv-section sec-live"><span class="fv-section-text">📋 Programa del Evento</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
         render_schedule(dv)
     else:
-        cat_sel = st.selectbox("Categoría", cat_opts, label_visibility="collapsed")
+        cat_sel = st.radio("Categoría", cat_opts, horizontal=True, label_visibility="collapsed", key="cat_rank")
         dv = df if cat_sel=="Todas las categorías" else df[df["categoria"]==cat_sel]
         st.markdown('<div class="fv-section sec-live"><span class="fv-section-text">🏆 Ranking Acumulado</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
         render_ranking(dv)
