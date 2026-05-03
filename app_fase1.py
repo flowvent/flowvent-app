@@ -14,6 +14,11 @@ st.set_page_config(page_title="Flowvent | Live", page_icon="⚡", layout="wide",
 st.markdown("""
 <meta name="google" content="notranslate">
 <meta http-equiv="Content-Language" content="es">
+<script>
+  // Force no translation on entire page
+  document.documentElement.setAttribute("translate", "no");
+  document.documentElement.setAttribute("lang", "es");
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap');
   html, body, [data-testid="stAppViewContainer"] { background:#07070F; font-family:'Inter',sans-serif; color:#fff; }
@@ -337,42 +342,42 @@ def render_envivo(df):
         html_por_arena[arena] += '</div>'
         st.markdown(html_por_arena[arena], unsafe_allow_html=True)
 
+def fecha_dd_mm_yyyy_a_int(f):
+    """Convierte DD/MM/YYYY a entero YYYYMMDD para ordenar correctamente."""
+    try:
+        p = str(f).strip().split("/")
+        if len(p) == 3:
+            return int(p[2]) * 10000 + int(p[1]) * 100 + int(p[0])
+    except: pass
+    return 0
+
+def hora_str_a_int(h):
+    """Convierte HH:MM a entero HHMM para ordenar."""
+    try:
+        p = str(h).strip().split(":")
+        return int(p[0]) * 100 + int(p[1])
+    except: return 0
+
 def render_schedule(df):
-    """Programa estatico ordenado cronologicamente por fecha y hora."""
+    """Programa estatico ordenado cronologicamente: 09/05 primero, 10/05 al final."""
     arenas = sorted(df["arena"].dropna().unique().tolist())
 
-    if "fecha" in df.columns:
-        df = df.copy()
-        df["_fecha"] = df["fecha"].astype(str).str.strip()
-        df["_hora"]  = df["hora_inicio"].astype(str).str.strip()
-    else:
-        df = df.copy()
-        df["_fecha"] = ""
-        df["_hora"]  = df["hora_inicio"].astype(str).str.strip()
+    df = df.copy()
+    if "fecha" not in df.columns:
+        df["fecha"] = ""
 
-    # Obtener combinaciones unicas fecha+hora, ordenadas cronologicamente
-    def sort_key(row):
-        f = row["_fecha"]
-        h = row["_hora"]
-        try:
-            parts = h.split(":")
-            h_num = int(parts[0])*60 + int(parts[1])
-        except:
-            h_num = 0
-        return (f, h_num)
+    df["_fecha_str"] = df["fecha"].astype(str).str.strip()
+    df["_hora_str"]  = df["hora_inicio"].astype(str).str.strip()
+    df["_fecha_int"] = df["_fecha_str"].apply(fecha_dd_mm_yyyy_a_int)
+    df["_hora_int"]  = df["_hora_str"].apply(hora_str_a_int)
 
-    df["_sort"] = df.apply(sort_key, axis=1)
-    # Convertir fecha DD/MM/YYYY a YYYY-MM-DD para ordenar correctamente
-    def fecha_sort(f):
-        try:
-            p = str(f).strip().split("/")
-            return f"{p[2]}-{p[1]}-{p[0]}"
-        except: return f
-    df["_fecha_iso"] = df["_fecha"].apply(fecha_sort)
-    df["_sort2"] = df["_fecha_iso"].astype(str) + " " + df["_sort"].astype(str).str.zfill(4)
-    claves = df.drop_duplicates(["_fecha","_hora"]).sort_values("_sort2")[["_fecha","_hora"]].values.tolist()
+    # Obtener combinaciones unicas de fecha+hora, ordenadas correctamente
+    claves_df = (df[["_fecha_str","_hora_str","_fecha_int","_hora_int"]]
+                 .drop_duplicates()
+                 .sort_values(["_fecha_int","_hora_int"])
+                 .reset_index(drop=True))
 
-    if not arenas or not claves:
+    if len(claves_df) == 0 or not arenas:
         st.warning("Sin datos para el programa."); return
 
     th = "".join(f'<th class="arena-col">🏟️ {a}</th>' for a in arenas)
@@ -382,21 +387,26 @@ def render_schedule(df):
     em = {"EN_CURSO":"st-live","FINALIZADO":"st-done","PROXIMO":"st-next"}
     et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Listo","PROXIMO":"◷ Próximo"}
 
-    for (fecha_val, hora_val) in claves:
-        hora_disp = parse_hora(hora_val)
+    for _, clave in claves_df.iterrows():
+        fecha_v = clave["_fecha_str"]
+        hora_v  = clave["_hora_str"]
+        hora_disp = parse_hora(hora_v)
+
         html += (f'<tr><td class="hora-td">'
-                 f'<span class="sb-fecha">{fecha_val}</span>'
+                 f'<span class="sb-fecha">{fecha_v}</span>'
                  f'<span class="sb-hora">{hora_disp}</span>'
                  f'</td>')
 
         for a in arenas:
-            mask = (df["_fecha"]==fecha_val) & (df["_hora"]==hora_val) & (df["arena"]==a)
+            mask = ((df["_fecha_str"]==fecha_v) &
+                    (df["_hora_str"]==hora_v) &
+                    (df["arena"]==a))
             rows_cell = df[mask]
+
             if rows_cell.empty:
                 html += '<td><div class="sb-empty-cell">—</div></td>'
             else:
-                cells = ""
-                seen = set()
+                cells = ""; seen = set()
                 for _,r in rows_cell.iterrows():
                     key = (r["equipo"], r["heat"], r["wod_nombre"])
                     if key in seen: continue
