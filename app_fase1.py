@@ -724,31 +724,37 @@ def main():
         if len(df_eventos)==1:
             st.query_params["evento"] = df_eventos.iloc[0]["nombre"]
             st.rerun()
-        st.markdown('<div class="fv-section sec-live"><span class="fv-section-text" style="font-size:1.3rem">Eventos activos</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="fv-section sec-live"><span class="fv-section-text" style="font-size:1.3rem">Eventos</span><div class="fv-section-line"></div></div>', unsafe_allow_html=True)
         cols = st.columns(min(len(df_eventos),2))
         for i,(_,ev) in enumerate(df_eventos.iterrows()):
-            nombre = str(ev.get("nombre","")).strip()
-            desc   = str(ev.get("descripcion","")).strip()
-            fecha  = str(ev.get("fecha","")).strip()
-            lugar  = str(ev.get("lugar","")).strip()
-            with cols[i%3]:
+            nombre        = str(ev.get("nombre","")).strip()
+            desc          = str(ev.get("descripcion","")).strip()
+            fecha         = str(ev.get("fecha","")).strip()
+            lugar         = str(ev.get("lugar","")).strip()
+            estado_evento = str(ev.get("estado_evento","EN VIVO")).strip().upper()
+            es_finalizado = estado_evento == "FINALIZADO"
+            if es_finalizado:
+                badge_html = '<span class="ev-badge ev-badge-done">✓ Finalizado</span>'
+                card_style = 'border-top:4px solid #555;'
+            else:
+                badge_html = '<span class="ev-badge">⚡ En vivo</span>'
+                card_style = ''
+            with cols[i%2]:
                 st.markdown(
-                    f'<div class="ev-card">'
+                    f'<div class="ev-card" style="{card_style}">'
                     f'<p class="ev-nombre">{nombre}</p>'
                     f'<p class="ev-desc">{desc}</p>'
                     f'<div class="ev-meta"><span class="ev-meta-item">📅 {fecha}</span>&nbsp;&nbsp;<span class="ev-meta-item">📍 {lugar}</span></div>'
-                    f'<div style="margin-top:12px"><span class="ev-badge">⚡ En vivo</span></div>'
+                    f'<div style="margin-top:12px">{badge_html}</div>'
                     f'</div>', unsafe_allow_html=True)
-                col_ing, col_op = st.columns([3,1])
-                with col_ing:
-                    if st.button("Ingresar →", key=f"ev_{i}", use_container_width=True):
-                        st.query_params["evento"] = nombre
-                        st.rerun()
-                with col_op:
-                    if st.button("⚙️ OP", key=f"op_{i}", use_container_width=True):
-                        st.query_params["evento"] = nombre
-                        st.query_params["panel"] = "operador"
-                        st.rerun()
+                if st.button("Ingresar →", key=f"ev_{i}", use_container_width=True):
+                    st.query_params["evento"] = nombre
+                    st.rerun()
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("⚙️ Panel Operador", key=f"op_{i}", use_container_width=True):
+                    st.query_params["evento"] = nombre
+                    st.query_params["panel"] = "operador"
+                    st.rerun()
         return
 
     if st.button("← Volver a eventos"):
