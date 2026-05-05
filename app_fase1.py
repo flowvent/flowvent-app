@@ -30,7 +30,9 @@ st.markdown("""
   html, body, [data-testid="stAppViewContainer"] { background:#07070F; font-family:'Inter',sans-serif; color:#fff; }
   [data-testid="stHeader"] { display:none; }
   [data-testid="block-container"] { padding:0 1.2rem 4rem; max-width:1600px; margin:0 auto; }
-  .appview-container .main .block-container { padding-top:1rem !important; }
+  #root > div:first-child { padding-top:0 !important; }
+  .stApp > header { display:none !important; }
+  .stApp { margin-top:-80px; }
   section[data-testid="stSidebar"] { display:none; }
   [data-testid="stMetric"] { background:#11111C; border:0.5px solid #1E1E35; border-radius:10px; padding:14px 18px; }
   [data-testid="stMetricLabel"] { font-size:0.7rem !important; letter-spacing:.1em; text-transform:uppercase; color:#555 !important; }
