@@ -410,7 +410,7 @@ def render_schedule(df):
             f'<thead><tr><th class="hora-col">📅 Fecha / ⏱ Hora</th>{th}</tr></thead><tbody>')
 
     em = {"EN_CURSO":"st-live","FINALIZADO":"st-done","PROXIMO":"st-next"}
-    et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Listo","PROXIMO":"◷ Próximo"}
+    et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ FINALIZADO","PROXIMO":"◷ Próximo"}
 
     for _, clave in claves_df.iterrows():
         fecha_v = clave["_fecha_str"]
