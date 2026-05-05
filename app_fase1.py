@@ -15,9 +15,15 @@ st.markdown("""
 <meta name="google" content="notranslate">
 <meta http-equiv="Content-Language" content="es">
 <script>
-  // Force no translation on entire page
   document.documentElement.setAttribute("translate", "no");
   document.documentElement.setAttribute("lang", "es");
+  // Observe DOM and re-apply notranslate to any new elements
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll("*").forEach(el => {
+      if (!el.hasAttribute("translate")) el.setAttribute("translate", "no");
+    });
+  });
+  obs.observe(document.body, {childList: true, subtree: true});
 </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap');
@@ -46,6 +52,7 @@ st.markdown("""
   .ev-meta { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:6px; }
   .ev-meta-item { font-size:.95rem; color:#555; }
   .ev-badge { display:inline-block; font-size:.82rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:7px 18px; border-radius:20px; background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
+  .ev-badge-done { background:rgba(136,136,136,.15); color:#888; border:1px solid #444; }
   .ev-event-name { font-family:'Barlow Condensed',sans-serif; font-size:1.1rem; font-weight:700; color:#00E676; text-transform:uppercase; letter-spacing:.06em; }
   .cat-chip { display:inline-block; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
   .cat-RX      { background:rgba(0,230,118,.15); color:#00E676; border:1px solid rgba(0,230,118,.3); }
@@ -149,7 +156,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st_autorefresh(interval=20_000, key="fv_refresh")
+# Auto-refresh solo cuando NO estamos en el panel operador
+_panel_activo = st.query_params.get("panel", None) == "operador"
+if not _panel_activo:
+    st_autorefresh(interval=20_000, key="fv_refresh")
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
 
@@ -174,9 +184,10 @@ def load_eventos():
     data = ws.get_all_records()
     if not data: return pd.DataFrame()
     df = pd.DataFrame(data)
-    for c in ["evento_id","nombre","descripcion","fecha","lugar","activo"]:
+    for c in ["evento_id","nombre","descripcion","fecha","lugar","activo","estado_evento"]:
         if c not in df.columns: df[c] = ""
     df["activo"] = df["activo"].astype(str).str.strip().str.upper()
+    df["estado_evento"] = df["estado_evento"].astype(str).str.strip().str.upper()
     return df[df["activo"]=="SI"].reset_index(drop=True)
 
 @st.cache_data(ttl=20)
@@ -399,7 +410,7 @@ def render_schedule(df):
             f'<thead><tr><th class="hora-col">📅 Fecha / ⏱ Hora</th>{th}</tr></thead><tbody>')
 
     em = {"EN_CURSO":"st-live","FINALIZADO":"st-done","PROXIMO":"st-next"}
-    et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ Listo","PROXIMO":"◷ Próximo"}
+    et = {"EN_CURSO":"⚡ En Curso","FINALIZADO":"✓ FINALIZADO","PROXIMO":"◷ Próximo"}
 
     for _, clave in claves_df.iterrows():
         fecha_v = clave["_fecha_str"]
